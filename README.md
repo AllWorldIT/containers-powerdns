@@ -14,6 +14,10 @@ The following directories can be mapped in:
 
 PowerDNS configuration directory.
 
+## Ports: 53/UDP+TCP, 8081
+
+Exposes DNS ports 53 and webserver port 8081.
+
 
 ## POWERDNS_SERVER_ID
 
