@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+
+  postgresql:
+    image: registry.gitlab.iitsp.com/allworldit/docker/postgresql:latest
+    environment:
+      - POSTGRES_PASSWORD=test123
+      - POSTGRES_USER=testuser
+      - POSTGRES_USER_PASSWORD=testpass
+      - POSTGRES_DATABASE=testdb
+
+  powerdns:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      - POWERDNS_SERVER_ID=test.server
+      - POWERDNS_WEBSERVER_ALLOW_FROM=0.0.0.0/0
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_USER=testuser
+      - POSTGRES_USER_PASSWORD=testpass
+      - POSTGRES_DATABASE=testdb
+    depends_on:
+      - postgresql
+    ports:
+      - 8081:8081
+      - 8053:8053/TCP
+      - 8053:8053/UDP
+

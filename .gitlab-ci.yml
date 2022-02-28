@@ -1,0 +1,14 @@
+include:
+  - project: 'allworldit/docker/gitlab-ci-template'
+    ref: master
+    file: '/default.yml'
+
+
+test:
+  stage: test
+  script:
+    - docker pull "${CI_IMAGE}"
+    - docker run -e CI=true --mount type=bind,source=/tmp,destination=/var/lib/mysql "${CI_IMAGE}"
+  artifacts:
+    paths:
+      - .TIMESTAMP

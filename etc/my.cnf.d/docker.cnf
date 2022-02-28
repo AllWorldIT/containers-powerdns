@@ -1,0 +1,17 @@
+[mysqld]
+; File per table
+innodb-file-per-table
+
+innodb-buffer-pool-size=64M
+innodb_flush_method=O_DIRECT
+
+net-write-timeout=6000
+net-read-timeout=6000
+
+max-allowed-packet=128M
+
+; Strict mode so we don't silently ignore some kinds of errors
+sql-mode=STRICT_ALL_TABLES
+
+[mysqldump]
+max-allowed-packet=1G
