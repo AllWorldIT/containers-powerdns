@@ -25,6 +25,7 @@ if [ ! -f /etc/pdns/conf.d/10-server-id.conf ]; then
 	fi
 	cat <<EOF > /etc/pdns/conf.d/10-server-id.conf
 server-id = $POWERDNS_SERVER_ID
+version-string = anonymous
 EOF
 fi
 
