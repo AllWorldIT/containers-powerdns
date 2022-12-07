@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  powerdns:
+    image: @@CI_IMAGE@@
+    environment:
+      - CI=mysql
+      - MYSQL_HOST=mariadb
+      - MYSQL_DATABASE=powerdns
+      - MYSQL_USER=powerdns
+      - MYSQL_PASSWORD=powerdns
+    volumes:
+      - ./data/powerdns:/var/lib/powerdns
+    networks:
+      - internal
+
+  mariadb:
+    image: registry.gitlab.iitsp.com/allworldit/docker/mariadb
+    environment:
+      - MYSQL_USER=powerdns
+      - MYSQL_PASSWORD=powerdns
+      - MYSQL_DATABASE=powerdns
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+# vim: filetype=yaml tabstop=2 shiftwidth=2 expandtab

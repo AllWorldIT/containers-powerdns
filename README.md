@@ -68,6 +68,11 @@ Username to use to connect with.
 User password to use when connecting to the database.
 
 
+## POWERDNS_INIT_POSTGRES
+
+This should only be used once to initialize the database.
+
+
 # MySQL Backend
 
 
@@ -91,3 +96,6 @@ Username to use to connect with.
 User password to use when connecting to the database.
 
 
+## POWERDNS_INIT_MYSQL
+
+This should only be used once to initialize the database.

@@ -1,79 +1,196 @@
+#
+# We use a builder to build mariadb
+#
+
+
+FROM registry.gitlab.iitsp.com/allworldit/docker/alpine:latest as builder
+
+
+ENV POWERDNS_VER=4.7.2
+
+
+# Install libs we need
+RUN set -ex; \
+	true "Installing build dependencies"; \
+# from https://git.alpinelinux.org/aports/tree/main/pdns/APKBUILD
+	apk add --no-cache \
+		build-base \
+		\
+		boost-dev curl curl-dev geoip-dev krb5-dev openssl-dev \
+		libsodium-dev lua-dev mariadb-connector-c-dev openldap-dev \
+		libpq-dev protobuf-dev sqlite-dev unixodbc-dev \
+		yaml-cpp-dev zeromq-dev mariadb-dev luajit-dev libmaxminddb-dev \
+		\
+		lmdb-dev
+
+# Download packages
+RUN set -ex; \
+	mkdir -p build; \
+	cd build; \
+	wget "https://downloads.powerdns.com/releases/pdns-${POWERDNS_VER}.tar.bz2"; \
+	tar -jxf "pdns-${POWERDNS_VER}.tar.bz2"
+
+
+# Build and install PowerDNS
+RUN set -ex; \
+	cd build; \
+	cd "pdns-${POWERDNS_VER}"; \
+# Compiler flags
+	export CFLAGS="-march=x86-64 -mtune=generic -Os -pipe -fno-plt -fexceptions -Wp,-D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fstack-clash-protection -fcf-protection -flto=auto"; \
+	export CXXFLAGS="-Wp,-D_GLIBCXX_ASSERTIONS"; \
+	export LDFLAGS="-Wl,-Os,--sort-common,--as-needed,-z,relro,-z,now -flto=auto"; \
+	\
+	./configure \
+		--prefix=/usr \
+		--sysconfdir="/etc/powerdns" \
+		--sbindir=/usr/sbin \
+		--mandir=/usr/share/man \
+		--infodir=/usr/share/info \
+		--localstatedir=/var \
+		--libdir="/usr/lib/powerdns" \
+		--disable-static \
+		--with-modules="" \
+		--with-dynmodules="bind geoip gmysql godbc gpgsql gsqlite3 ldap lmdb lua2 pipe remote" \
+		--with-libsodium \
+		--enable-tools \
+		--enable-ixfrdist \
+		--enable-dns-over-tls \
+		--disable-dependency-tracking \
+		--disable-silent-rules \
+		--enable-reproducible \
+		--enable-unit-tests \
+		--with-service-user=powerdns \
+		--with-service-group=powerdns \
+		--enable-remotebackend-zeromq; \
+	make V=1 -j$(nproc) CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"; \
+	\
+	pkgdir=/build/powerdns-root; \
+	make DESTDIR="$pkgdir" install; \
+	\
+# Move some things around
+	mv "$pkgdir"/etc/powerdns/pdns.conf-dist "$pkgdir"/etc/powerdns/pdns.conf; \
+	mv "$pkgdir"/etc/powerdns/ixfrdist.example.yml "$pkgdir"/usr/share/doc/pdns/; \
+# Remove cruft
+	find "$pkgdir" -type f -name "*.a" -o -name "*.la" | xargs rm -fv; \
+	rm -rfv \
+		"$pkgdir"/usr/include \
+		"$pkgdir"/usr/share/man
+
+
+RUN set -ex; \
+	cd build/powerdns-root; \
+	find .; \
+	scanelf --recursive --nobanner --osabi --etype "ET_DYN,ET_EXEC" .  | awk '{print $3}' | xargs \
+		strip \
+			--remove-section=.comment \
+			--remove-section=.note \
+			-R .gnu.lto_* -R .gnu.debuglto_* \
+			-N __gnu_lto_slim -N __gnu_lto_v1 \
+			--strip-unneeded
+
+
+
+#
+# Build final image
+#
+
+
+
 FROM registry.gitlab.iitsp.com/allworldit/docker/alpine:latest
 
 ARG VERSION_INFO=
 LABEL maintainer="Nigel Kukard <nkukard@lbsd.net>"
 
+
+# Copy in built binaries
+COPY --from=builder /build/powerdns-root /
+
+
 RUN set -ex; \
-	true "MariaDB Client"; \
-	apk add --no-cache mariadb-client; \
-	true "PostgreSQL Client"; \
-	apk add --no-cache postgresql-client; \
-	true "PowerDNS"; \
+	true "PowerDNS requirements"; \
 	apk add --no-cache \
-		pdns \
-		pdns-backend-bind \
-		pdns-backend-geoip \
-		pdns-backend-ldap \
-		pdns-backend-lua2 \
-		pdns-backend-mariadb \
-		pdns-backend-pgsql \
-		pdns-backend-pipe \
-		pdns-backend-remote \
-		pdns-backend-sqlite3 \
-		pdns-doc \
+		boost-libs \
+		geoip \
+		libcurl \
+		libldap \
+		libpq \
+		libmaxminddb-libs \
+		lmdb \
+		luajit \
+		mariadb-client \
+		mariadb-connector-c \
+		postgresql-client \
+		sqlite \
+		unixodbc \
+		yaml-cpp \
+		zeromq \
 		; \
+	true "Setup user and group"; \
+	addgroup -S powerdns 2>/dev/null; \
+	adduser -S -D -h /var/lib/powerdns -s /sbin/nologin -G powerdns -g powerdns powerdns 2>/dev/null; \
+	\
 	true "Tools"; \
 	apk add --no-cache \
 		bind-tools \
-		pwgen \
 		; \
 	true "Versioning"; \
 	if [ -n "$VERSION_INFO" ]; then echo "$VERSION_INFO" >> /.VERSION_INFO; fi; \
 	true "Cleanup"; \
 	rm -f /var/cache/apk/*
 
-RUN set -ex; \
-	true "Creating runtime directories"; \
-	mkdir -p /run/pdns; \
-	chown -R pdns:pdns /run/pdns; \
-	chmod 2777 /run/pdns
 
 RUN set -ex; \
 	true "Setup configuration"; \
-	mkdir -p /etc/pdns/conf.d; \
-	rm /etc/pdns/4.1.0_to_4.2.0_schema.pgsql.sql; \
-	sed -ri "s!^#?\s*(disable-syslog)\s*=\s*\S*.*!\1 = yes!" /etc/pdns/pdns.conf; \
-	grep -E "^disable-syslog = yes$" /etc/pdns/pdns.conf; \
-	sed -ri "s!^#?\s*(include-dir)\s*=\s*\S*.*!\1 = /etc/pdns/conf.d!" /etc/pdns/pdns.conf; \
-	grep -E "^include-dir = /etc/pdns/conf\.d$" /etc/pdns/pdns.conf; \
-	sed -ri "s!^#?\s*(launch)\s*=\s*\S*.*!\1 =!" /etc/pdns/pdns.conf; \
-	grep -E "^launch =$" /etc/pdns/pdns.conf; \
-	sed -ri "s!^#?\s*(socket-dir)\s*=\s*\S*.*!\1 = /run/pdns!" /etc/pdns/pdns.conf; \
-	grep -E "^socket-dir = /run/pdns$" /etc/pdns/pdns.conf; \
-	sed -ri "s!^#?\s*(version-string)\s*=\s*\S*.*!\1 = anonymous!" /etc/pdns/pdns.conf; \
-	grep -E "^version-string = anonymous$" /etc/pdns/pdns.conf; \
-	chmod 0750 /etc/pdns; \
-	chmod 0640 /etc/pdns/pdns.conf; \
-	chown -R root:pdns /etc/pdns
+	mkdir -p /etc/powerdns/conf.d; \
+	sed -ri "s!^#?\s*(disable-syslog)\s*=\s*\S*.*!\1 = yes!" /etc/powerdns/pdns.conf; \
+	grep -E "^disable-syslog = yes$" /etc/powerdns/pdns.conf; \
+	sed -ri "s!^#?\s*(log-timestamp)\s*=\s*\S*.*!\1 = yes!" /etc/powerdns/pdns.conf; \
+	grep -E "^log-timestamp = yes$" /etc/powerdns/pdns.conf; \
+	sed -ri "s!^#?\s*(include-dir)\s*=\s*\S*.*!\1 = /etc/powerdns/conf.d!" /etc/powerdns/pdns.conf; \
+	grep -E "^include-dir = /etc/powerdns/conf\.d$" /etc/powerdns/pdns.conf; \
+	sed -ri "s!^#?\s*(launch)\s*=\s*\S*.*!\1 =!" /etc/powerdns/pdns.conf; \
+	grep -E "^launch =$" /etc/powerdns/pdns.conf; \
+	sed -ri "s!^#?\s*(socket-dir)\s*=\s*\S*.*!\1 = /run/powerdns!" /etc/powerdns/pdns.conf; \
+	grep -E "^socket-dir = /run/powerdns$" /etc/powerdns/pdns.conf; \
+	sed -ri "s!^#?\s*(version-string)\s*=\s*\S*.*!\1 = anonymous!" /etc/powerdns/pdns.conf; \
+	grep -E "^version-string = anonymous$" /etc/powerdns/pdns.conf; \
+	chmod 0750 /etc/powerdns; \
+	chmod 0640 /etc/powerdns/pdns.conf; \
+	chown -R root:powerdns /etc/powerdns
 
 
 # PowerDNS
 COPY etc/supervisor/conf.d/powerdns.conf /etc/supervisor/conf.d/powerdns.conf
-COPY init.d/50-powerdns.sh /docker-entrypoint-init.d/50-powerdns.sh
-COPY pre-init-tests.d/50-powerdns.sh /docker-entrypoint-pre-init-tests.d/50-powerdns.sh
-COPY tests.d/50-powerdns.sh /docker-entrypoint-tests.d/50-powerdns.sh
+COPY init.d/60-powerdns.sh /docker-entrypoint-init.d/60-powerdns.sh
+COPY pre-init-tests.d/60-powerdns.sh /docker-entrypoint-pre-init-tests.d/60-powerdns.sh
+COPY pre-init-tests.d/62-powerdns-mysql.sh /docker-entrypoint-pre-init-tests.d/62-powerdns-mysql.sh
+COPY pre-init-tests.d/62-powerdns-postgres.sh /docker-entrypoint-pre-init-tests.d/62-powerdns-postgres.sh
+COPY pre-init-tests.d/62-powerdns-zonefile.sh /docker-entrypoint-pre-init-tests.d/62-powerdns-zonefile.sh
+COPY tests.d/62-powerdns-mysql.sh /docker-entrypoint-tests.d/62-powerdns-mysql.sh
+COPY tests.d/62-powerdns-postgres.sh /docker-entrypoint-tests.d/62-powerdns-postgres.sh
+COPY tests.d/68-powerdns.sh /docker-entrypoint-tests.d/68-powerdns.sh
 RUN set -ex; \
 	chown root:root \
 		/etc/supervisor/conf.d/powerdns.conf \
-		/docker-entrypoint-init.d/50-powerdns.sh \
-		/docker-entrypoint-pre-init-tests.d/50-powerdns.sh \
-		/docker-entrypoint-tests.d/50-powerdns.sh; \
+		/docker-entrypoint-init.d/60-powerdns.sh \
+		/docker-entrypoint-pre-init-tests.d/60-powerdns.sh \
+		/docker-entrypoint-pre-init-tests.d/62-powerdns-mysql.sh \
+		/docker-entrypoint-pre-init-tests.d/62-powerdns-postgres.sh \
+		/docker-entrypoint-pre-init-tests.d/62-powerdns-zonefile.sh \
+		/docker-entrypoint-tests.d/62-powerdns-mysql.sh \
+		/docker-entrypoint-tests.d/62-powerdns-postgres.sh \
+		/docker-entrypoint-tests.d/68-powerdns.sh; \
 	chmod 0644 \
 		/etc/supervisor/conf.d/powerdns.conf; \
 	chmod 0755 \
-		/docker-entrypoint-init.d/50-powerdns.sh \
-		/docker-entrypoint-pre-init-tests.d/50-powerdns.sh \
-		/docker-entrypoint-tests.d/50-powerdns.sh
+		/docker-entrypoint-init.d/60-powerdns.sh \
+		/docker-entrypoint-pre-init-tests.d/60-powerdns.sh \
+		/docker-entrypoint-pre-init-tests.d/62-powerdns-mysql.sh \
+		/docker-entrypoint-pre-init-tests.d/62-powerdns-postgres.sh \
+		/docker-entrypoint-pre-init-tests.d/62-powerdns-zonefile.sh \
+		/docker-entrypoint-tests.d/62-powerdns-mysql.sh \
+		/docker-entrypoint-tests.d/62-powerdns-postgres.sh \
+		/docker-entrypoint-tests.d/68-powerdns.sh
 
 
 EXPOSE 53/TCP 53/UDP

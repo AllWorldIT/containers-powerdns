@@ -1,21 +1,28 @@
 #!/bin/sh
 
-export POWERDNS_SERVER_ID=test.example.net
 
-cat <<EOF > /etc/pdns/conf.d/50-test.conf
+# If we're not running the zonefile CI test, just return
+[ "$CI" = "zonefile" ] || return 0
+
+
+#
+# As the zonefile requires config changes we have this in the pre-init-tests.d
+#
+
+cat <<EOF > /etc/powerdns/conf.d/50-test.conf
 launch+=bind
-bind-config=/etc/pdns/named.conf
+bind-config=/etc/powerdns/named.conf
 EOF
 
-cat <<EOF > /etc/pdns/named.conf
+cat <<EOF > /etc/powerdns/named.conf
 zone "example.com" {
 	type master;
-	file "/etc/pdns/named.zones/example.com";
+	file "/etc/powerdns/named.zones/example.com";
 };
 EOF
 
-mkdir /etc/pdns/named.zones
-cat<<EOF > /etc/pdns/named.zones/example.com
+mkdir /etc/powerdns/named.zones
+cat<<EOF > /etc/powerdns/named.zones/example.com
 \$TTL    604800
 @       IN      SOA     localhost. root.localhost. (
                               1         ; Serial

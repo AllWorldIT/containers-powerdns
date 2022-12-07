@@ -8,7 +8,39 @@ test:
   stage: test
   script:
     - docker pull "${CI_IMAGE}"
-    - docker run -e CI=true --mount type=bind,source=/tmp,destination=/var/lib/mysql "${CI_IMAGE}"
+    - docker run -e CI=zonefile --mount type=bind,source=/tmp,destination=/var/lib/mysql "${CI_IMAGE}"
   artifacts:
     paths:
       - .TIMESTAMP
+
+
+test-mysql:
+  stage: test
+  needs:
+    - job: test
+  script:
+    - docker pull "${CI_IMAGE}"
+    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-mysql"
+    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-mysql"
+    - sed -e "s,@@CI_IMAGE@@,${CI_IMAGE}," < docker-compose.yml.mysql.tmpl > docker-compose.yml
+    - ./run-cluster-test
+  artifacts:
+    paths:
+      - .TIMESTAMP
+
+
+test-postgres:
+  stage: test
+  needs:
+    - job: test-mysql
+  script:
+    - docker pull "${CI_IMAGE}"
+    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-postgres"
+    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-postgres"
+    - sed -e "s,@@CI_IMAGE@@,${CI_IMAGE}," < docker-compose.yml.postgres.tmpl > docker-compose.yml
+    - ./run-cluster-test
+  artifacts:
+    paths:
+      - .TIMESTAMP
+
+

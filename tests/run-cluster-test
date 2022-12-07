@@ -1,0 +1,52 @@
+#!/bin/sh
+
+
+function check_tests() {
+    test_file=$1
+
+    i=120
+    while [ "$i" -gt 0 ]; do
+        i=$((i-1))
+        if [ -e "data/powerdns/$test_file" ]; then
+            echo "PASSED: Test $test_file"
+            break
+        fi
+        echo "INFO: Waiting for tests to pass ($test_file)... ${i}s"
+        sleep 1
+    done
+
+    if [ "$i" = 0 ]; then
+        return 1
+    fi
+
+    return 0
+}
+
+
+
+[ -d data/powerdns ] && rm -rf data/powerdns
+
+
+mkdir -p data/powerdns
+
+# Run in background so we can see the output
+docker-compose up --remove-orphans &
+
+# This is run within a very minimal environment, we don't have access to using for i in {180..0} or for ((xxxxxx))
+test1_passed=
+if check_tests POWERDNS_CI_PASSED1; then
+    echo "NOTICE: Default test set PASSED"
+    test1_passed=1
+fi
+
+
+echo "NOTICE: Shutting down PowerDNS"
+docker-compose down --remove-orphans --volumes
+
+
+if [ -z "$test1_passed" ]; then
+	echo "ERROR: PowerDNS test failed!"
+	exit 1
+fi
+
+echo "ALL TESTS PASSED!"
