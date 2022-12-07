@@ -3,7 +3,7 @@
 #
 
 
-FROM registry.gitlab.iitsp.com/allworldit/docker/alpine:latest as builder
+FROM registry.gitlab.iitsp.com/allworldit/docker/alpine/v3.17:latest as builder
 
 
 ENV POWERDNS_VER=4.7.2
@@ -96,7 +96,7 @@ RUN set -ex; \
 
 
 
-FROM registry.gitlab.iitsp.com/allworldit/docker/alpine:latest
+FROM registry.gitlab.iitsp.com/allworldit/docker/alpine/v3.17:latest
 
 ARG VERSION_INFO=
 LABEL maintainer="Nigel Kukard <nkukard@lbsd.net>"
