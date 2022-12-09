@@ -6,7 +6,7 @@
 FROM registry.gitlab.iitsp.com/allworldit/docker/alpine/v3.17:latest as builder
 
 
-ENV POWERDNS_VER=4.7.2
+ENV POWERDNS_VER=4.7.3
 
 
 # Install libs we need
