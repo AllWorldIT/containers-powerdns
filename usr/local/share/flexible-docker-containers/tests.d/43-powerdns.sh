@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (c) 2022-2023, AllWorldIT.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,29 +20,28 @@
 # IN THE SOFTWARE.
 
 
-version: '3.9'
-services:
+fdc_test_start powerdns "Testing DNS query result using IPv4"
+if ! dig TXT powerdns.example.com @127.0.0.1 | grep WORKING; then
+	fdc_test_fail powerdns "Failed to get correct DNS query reply using IPv4"
+	false
+fi
+fdc_test_pass powerdns "Correct DNS query reply from PowerDNS using IPv4"
 
-  mariadb:
-    image: registry.conarx.tech/containers/mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=test123
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
 
-  powerdns:
-    image: registry.conarx.tech/containers/powerdns
-    environment:
-      - POWERDNS_SERVER_ID=test.server
-      - POWERDNS_WEBSERVER_ALLOW_FROM=0.0.0.0/0
-      - MYSQL_HOST=mariadb
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
-    depends_on:
-      - mariadb
-    ports:
-      - 8081:8081
-      - 8053:8053/TCP
-      - 8053:8053/UDP
+# Return if we don't have IPv6 support
+if [ -z "$(ip -6 route show default)" ]; then
+	touch /PASSED_POWERDNS
+	return
+fi
+
+
+fdc_test_start powerdns "Testing DNS query result using IPv6"
+if ! dig TXT powerdns.example.com @::1 | grep WORKING; then
+	fdc_test_fail powerdns "Failed to get correct DNS query reply using IPv6"
+	false
+fi
+fdc_test_pass powerdns "Correct DNS query reply from PowerDNS using IPv6"
+
+
+touch /PASSED_POWERDNS
+

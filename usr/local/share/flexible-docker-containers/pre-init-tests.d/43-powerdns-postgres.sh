@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (c) 2022-2023, AllWorldIT.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,29 +20,15 @@
 # IN THE SOFTWARE.
 
 
-version: '3.9'
-services:
+# If we're not running the PostgreSQL CI test, just return
+if [ "$FDC_CI" != "postgresql" ]; then
+  return
+fi
 
-  mariadb:
-    image: registry.conarx.tech/containers/mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=test123
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
+fdc_notice "Setting up PowerDNS PostgreSQL test environment"
 
-  powerdns:
-    image: registry.conarx.tech/containers/powerdns
-    environment:
-      - POWERDNS_SERVER_ID=test.server
-      - POWERDNS_WEBSERVER_ALLOW_FROM=0.0.0.0/0
-      - MYSQL_HOST=mariadb
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
-    depends_on:
-      - mariadb
-    ports:
-      - 8081:8081
-      - 8053:8053/TCP
-      - 8053:8053/UDP
+# Check if we need to initialize the database
+if [ -n "$POSTGRES_DATABASE" ]; then
+  # shellcheck disable=SC2034
+  POWERDNS_INIT_POSTGRES=yes
+fi

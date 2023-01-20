@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (c) 2022-2023, AllWorldIT.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,29 +20,30 @@
 # IN THE SOFTWARE.
 
 
-version: '3.9'
-services:
+# shellcheck disable=SC2086
+POWERDNS_TEST_RESULT_IPV4=$(dig $POWERDNS_HEALTHCECK_QUERY @127.0.0.1 2>&1)
+if ! grep "status: NOERROR" <<< "$POWERDNS_TEST_RESULT_IPV4"; then
+	fdc_error "Health check failed for PowerDNS using '$POWERDNS_HEALTHCHECK_QUERY' over IPv4:\n$POWERDNS_TEST_RESULT"
+	false
+fi
+if [ -n "$FDC_CI" ]; then
+	fdc_info "Health check for PowerDNS:\n$POWERDNS_TEST_RESULT_IPV4"
+fi
 
-  mariadb:
-    image: registry.conarx.tech/containers/mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=test123
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
 
-  powerdns:
-    image: registry.conarx.tech/containers/powerdns
-    environment:
-      - POWERDNS_SERVER_ID=test.server
-      - POWERDNS_WEBSERVER_ALLOW_FROM=0.0.0.0/0
-      - MYSQL_HOST=mariadb
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
-    depends_on:
-      - mariadb
-    ports:
-      - 8081:8081
-      - 8053:8053/TCP
-      - 8053:8053/UDP
+# Return if we don't have IPv6 support
+if [ -z "$(ip -6 route show default)" ]; then
+	touch /PASSED_POWERDNS
+	return
+fi
+
+
+# shellcheck disable=SC2086
+POWERDNS_TEST_RESULT_IPV6=$(dig $POWERDNS_HEALTHCECK_QUERY @::1 2>&1)
+if ! grep "status: NOERROR" <<< "$POWERDNS_TEST_RESULT_IPV6"; then
+	fdc_error "Health check failed for PowerDNS using '$POWERDNS_HEALTHCHECK_QUERY' over IPv6:\n$POWERDNS_TEST_RESULT"
+	false
+fi
+if [ -n "$FDC_CI" ]; then
+	fdc_info "Health check for PowerDNS:\n$POWERDNS_TEST_RESULT_IPV6"
+fi

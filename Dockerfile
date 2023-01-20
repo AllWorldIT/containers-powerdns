@@ -3,14 +3,14 @@
 #
 
 
-FROM registry.gitlab.iitsp.com/allworldit/docker/alpine/v3.17:latest as builder
+FROM registry.conarx.tech/containers/alpine/3.17 as builder
 
 
 ENV POWERDNS_VER=4.7.3
 
 
 # Install libs we need
-RUN set -ex; \
+RUN set -eux; \
 	true "Installing build dependencies"; \
 # from https://git.alpinelinux.org/aports/tree/main/pdns/APKBUILD
 	apk add --no-cache \
@@ -24,7 +24,7 @@ RUN set -ex; \
 		lmdb-dev
 
 # Download packages
-RUN set -ex; \
+RUN set -eux; \
 	mkdir -p build; \
 	cd build; \
 	wget "https://downloads.powerdns.com/releases/pdns-${POWERDNS_VER}.tar.bz2"; \
@@ -32,7 +32,7 @@ RUN set -ex; \
 
 
 # Build and install PowerDNS
-RUN set -ex; \
+RUN set -eux; \
 	cd build; \
 	cd "pdns-${POWERDNS_VER}"; \
 # Compiler flags
@@ -62,7 +62,7 @@ RUN set -ex; \
 		--with-service-user=powerdns \
 		--with-service-group=powerdns \
 		--enable-remotebackend-zeromq; \
-	make V=1 -j$(nproc) CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"; \
+	make V=1 -j$(nproc) -l8 CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"; \
 	\
 	pkgdir=/build/powerdns-root; \
 	make DESTDIR="$pkgdir" install; \
@@ -77,9 +77,8 @@ RUN set -ex; \
 		"$pkgdir"/usr/share/man
 
 
-RUN set -ex; \
+RUN set -eux; \
 	cd build/powerdns-root; \
-	find .; \
 	scanelf --recursive --nobanner --osabi --etype "ET_DYN,ET_EXEC" .  | awk '{print $3}' | xargs \
 		strip \
 			--remove-section=.comment \
@@ -96,17 +95,20 @@ RUN set -ex; \
 
 
 
-FROM registry.gitlab.iitsp.com/allworldit/docker/alpine/v3.17:latest
+FROM registry.conarx.tech/containers/alpine/3.17
+
 
 ARG VERSION_INFO=
-LABEL maintainer="Nigel Kukard <nkukard@lbsd.net>"
+LABEL org.opencontainers.image.authors   = "Nigel Kukard <nkukard@conarx.tech>"
+LABEL org.opencontainers.image.version   = "3.17"
+LABEL org.opencontainers.image.base.name = "registry.conarx.tech/containers/alpine/3.17"
 
 
 # Copy in built binaries
 COPY --from=builder /build/powerdns-root /
 
 
-RUN set -ex; \
+RUN set -eux; \
 	true "PowerDNS requirements"; \
 	apk add --no-cache \
 		boost-libs \
@@ -133,13 +135,11 @@ RUN set -ex; \
 	apk add --no-cache \
 		bind-tools \
 		; \
-	true "Versioning"; \
-	if [ -n "$VERSION_INFO" ]; then echo "$VERSION_INFO" >> /.VERSION_INFO; fi; \
 	true "Cleanup"; \
 	rm -f /var/cache/apk/*
 
 
-RUN set -ex; \
+RUN set -eux; \
 	true "Setup configuration"; \
 	mkdir -p /etc/powerdns/conf.d; \
 	sed -ri "s!^#?\s*(disable-syslog)\s*=\s*\S*.*!\1 = yes!" /etc/powerdns/pdns.conf; \
@@ -161,38 +161,28 @@ RUN set -ex; \
 
 # PowerDNS
 COPY etc/supervisor/conf.d/powerdns.conf /etc/supervisor/conf.d/powerdns.conf
-COPY init.d/60-powerdns.sh /docker-entrypoint-init.d/60-powerdns.sh
-COPY pre-init-tests.d/60-powerdns.sh /docker-entrypoint-pre-init-tests.d/60-powerdns.sh
-COPY pre-init-tests.d/62-powerdns-mysql.sh /docker-entrypoint-pre-init-tests.d/62-powerdns-mysql.sh
-COPY pre-init-tests.d/62-powerdns-postgres.sh /docker-entrypoint-pre-init-tests.d/62-powerdns-postgres.sh
-COPY pre-init-tests.d/62-powerdns-zonefile.sh /docker-entrypoint-pre-init-tests.d/62-powerdns-zonefile.sh
-COPY tests.d/62-powerdns-mysql.sh /docker-entrypoint-tests.d/62-powerdns-mysql.sh
-COPY tests.d/62-powerdns-postgres.sh /docker-entrypoint-tests.d/62-powerdns-postgres.sh
-COPY tests.d/68-powerdns.sh /docker-entrypoint-tests.d/68-powerdns.sh
-RUN set -ex; \
+COPY usr/local/share/flexible-docker-containers/init.d/42-powerdns.sh /usr/local/share/flexible-docker-containers/init.d
+COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/42-powerdns.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
+COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/43-powerdns-mysql.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
+COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/43-powerdns-postgres.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
+COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/43-powerdns-zonefile.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
+COPY usr/local/share/flexible-docker-containers/tests.d/42-powerdns-mysql.sh /usr/local/share/flexible-docker-containers/tests.d
+COPY usr/local/share/flexible-docker-containers/tests.d/42-powerdns-postgres.sh /usr/local/share/flexible-docker-containers/tests.d
+COPY usr/local/share/flexible-docker-containers/tests.d/43-powerdns.sh /usr/local/share/flexible-docker-containers/tests.d
+COPY usr/local/share/flexible-docker-containers/tests.d/99-powerdns.sh /usr/local/share/flexible-docker-containers/tests.d
+COPY usr/local/share/flexible-docker-containers/healthcheck.d/42-powerdns.sh /usr/local/share/flexible-docker-containers/healthcheck.d
+RUN set -eux; \
+	true "Flexible Docker Containers"; \
+	if [ -n "$VERSION_INFO" ]; then echo "$VERSION_INFO" >> /.VERSION_INFO; fi; \
+	true "Permissions"; \
 	chown root:root \
-		/etc/supervisor/conf.d/powerdns.conf \
-		/docker-entrypoint-init.d/60-powerdns.sh \
-		/docker-entrypoint-pre-init-tests.d/60-powerdns.sh \
-		/docker-entrypoint-pre-init-tests.d/62-powerdns-mysql.sh \
-		/docker-entrypoint-pre-init-tests.d/62-powerdns-postgres.sh \
-		/docker-entrypoint-pre-init-tests.d/62-powerdns-zonefile.sh \
-		/docker-entrypoint-tests.d/62-powerdns-mysql.sh \
-		/docker-entrypoint-tests.d/62-powerdns-postgres.sh \
-		/docker-entrypoint-tests.d/68-powerdns.sh; \
+		/etc/supervisor/conf.d/powerdns.conf; \
 	chmod 0644 \
 		/etc/supervisor/conf.d/powerdns.conf; \
-	chmod 0755 \
-		/docker-entrypoint-init.d/60-powerdns.sh \
-		/docker-entrypoint-pre-init-tests.d/60-powerdns.sh \
-		/docker-entrypoint-pre-init-tests.d/62-powerdns-mysql.sh \
-		/docker-entrypoint-pre-init-tests.d/62-powerdns-postgres.sh \
-		/docker-entrypoint-pre-init-tests.d/62-powerdns-zonefile.sh \
-		/docker-entrypoint-tests.d/62-powerdns-mysql.sh \
-		/docker-entrypoint-tests.d/62-powerdns-postgres.sh \
-		/docker-entrypoint-tests.d/68-powerdns.sh
+	fdc set-perms
 
 
 EXPOSE 53/TCP 53/UDP
+
 EXPOSE 8081
 

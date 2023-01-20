@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (c) 2022-2023, AllWorldIT.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,29 +20,20 @@
 # IN THE SOFTWARE.
 
 
-version: '3.9'
-services:
+fdc_notice "Setting up PowerDNS test environment"
 
-  mariadb:
-    image: registry.conarx.tech/containers/mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=test123
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
+# shellcheck disable=SC2034
+POWERDNS_SERVER_ID=test.example.net
 
-  powerdns:
-    image: registry.conarx.tech/containers/powerdns
-    environment:
-      - POWERDNS_SERVER_ID=test.server
-      - POWERDNS_WEBSERVER_ALLOW_FROM=0.0.0.0/0
-      - MYSQL_HOST=mariadb
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
-    depends_on:
-      - mariadb
-    ports:
-      - 8081:8081
-      - 8053:8053/TCP
-      - 8053:8053/UDP
+# Enable some debugging options
+cat <<EOF > /etc/powerdns/conf.d/99-ci-testing.conf
+log-dns-details=yes
+log-dns-queries=yes
+loglevel=3
+
+EOF
+
+# If we're run in the default FDC_CI test mode, change to using zonefile
+if [ "$FDC_CI" = "true" ]; then
+	FDC_CI="zonefile"
+fi

@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright (c) 2022-2023, AllWorldIT.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,29 +20,27 @@
 # IN THE SOFTWARE.
 
 
-version: '3.9'
-services:
+# If we're not running the mysql CI test, just return
+if [ "$FDC_CI" != "mysql" ]; then
+	return
+fi
 
-  mariadb:
-    image: registry.conarx.tech/containers/mariadb
-    environment:
-      - MYSQL_ROOT_PASSWORD=test123
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
 
-  powerdns:
-    image: registry.conarx.tech/containers/powerdns
-    environment:
-      - POWERDNS_SERVER_ID=test.server
-      - POWERDNS_WEBSERVER_ALLOW_FROM=0.0.0.0/0
-      - MYSQL_HOST=mariadb
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass
-      - MYSQL_DATABASE=testdb
-    depends_on:
-      - mariadb
-    ports:
-      - 8081:8081
-      - 8053:8053/TCP
-      - 8053:8053/UDP
+fdc_test_start powerdns "Creating PowerDNS MySQL test data using pdnsutil..."
+if ! pdnsutil create-zone example.com ns.example.com; then
+	fdc_test_failed powerdns "Failed to create PowerDNS MySQL zone"
+	false
+fi
+if ! pdnsutil add-record example.com powerdns TXT WORKING; then
+	fdc_test_failed powerdns "Failed to add record to PowerDNS MySQL zone"
+	false
+fi
+if ! pdnsutil check-zone example.com; then
+	fdc_test_failed powerdns "Failed to checking PowerDNS MySQL zone"
+	false
+fi
+if ! pdns_control rediscover; then
+	fdc_test_failed powerdns "Failed rediscover for PowerDNS MySQL zone"
+	false
+fi
+fdc_test_pass powerdns "PowerDNS MySQL test data created"
