@@ -20,5 +20,10 @@
 # IN THE SOFTWARE.
 
 
+# For the standard zonefile test we don't need to wait
+if [ "$FDC_CI" = "zonefile" ]; then
+	return
+fi
+
 fdc_notice "Done with PowerDNS testing, waiting for shutdown"
 sleep 600
