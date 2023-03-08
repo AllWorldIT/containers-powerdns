@@ -99,9 +99,9 @@ FROM registry.conarx.tech/containers/alpine/3.17
 
 
 ARG VERSION_INFO=
-LABEL org.opencontainers.image.authors   = "Nigel Kukard <nkukard@conarx.tech>"
-LABEL org.opencontainers.image.version   = "3.17"
-LABEL org.opencontainers.image.base.name = "registry.conarx.tech/containers/alpine/3.17"
+LABEL org.opencontainers.image.authors   "Nigel Kukard <nkukard@conarx.tech>"
+LABEL org.opencontainers.image.version   "3.17"
+LABEL org.opencontainers.image.base.name "registry.conarx.tech/containers/alpine/3.17"
 
 
 # Copy in built binaries
