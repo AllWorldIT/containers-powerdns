@@ -35,10 +35,6 @@ RUN set -eux; \
 RUN set -eux; \
 	cd build; \
 	cd "pdns-${POWERDNS_VER}"; \
-# Compiler flags
-	export CFLAGS="-march=x86-64 -mtune=generic -Os -pipe -fno-plt -fexceptions -Wp,-D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fstack-clash-protection -fcf-protection -flto=auto"; \
-	export CXXFLAGS="-Wp,-D_GLIBCXX_ASSERTIONS"; \
-	export LDFLAGS="-Wl,-Os,--sort-common,--as-needed,-z,relro,-z,now -flto=auto"; \
 	\
 	./configure \
 		--prefix=/usr \
@@ -62,7 +58,7 @@ RUN set -eux; \
 		--with-service-user=powerdns \
 		--with-service-group=powerdns \
 		--enable-remotebackend-zeromq; \
-	make V=1 -j$(nproc) -l8 CFLAGS="$CFLAGS" CXXFLAGS="$CXXFLAGS" LDFLAGS="$LDFLAGS"; \
+	make V=1 -j$(nproc) -l8; \
 	\
 	pkgdir=/build/powerdns-root; \
 	make DESTDIR="$pkgdir" install; \
