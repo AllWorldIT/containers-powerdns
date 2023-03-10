@@ -4,32 +4,19 @@ include:
     file: '/default.yml'
 
 
-test-mysql:
+test-database:
   stage: test
+  parallel:
+    matrix:
+      - database: [ "mysql", "postgres" ]
   needs:
     - build
     - test
   script:
     - docker pull "${PIPELINE_IMAGE}"
-    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-mysql"
-    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-mysql"
-    - sed -e "s,@@PIPELINE_IMAGE@@,${PIPELINE_IMAGE}," < docker-compose.yml.mysql.tmpl > docker-compose.yml
-    - ./run-cluster-test
-  artifacts:
-    paths:
-      - .TIMESTAMP
-
-
-test-postgres:
-  stage: test
-  needs:
-    - build
-    - test-mysql
-  script:
-    - docker pull "${PIPELINE_IMAGE}"
-    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-postgres"
-    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-postgres"
-    - sed -e "s,@@PIPELINE_IMAGE@@,${PIPELINE_IMAGE}," < docker-compose.yml.postgres.tmpl > docker-compose.yml
+    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-${database}"
+    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-${database}"
+    - sed -e "s,@@PIPELINE_IMAGE@@,${PIPELINE_IMAGE}," < docker-compose.yml.${database}.tmpl > docker-compose.yml
     - ./run-cluster-test
   artifacts:
     paths:
