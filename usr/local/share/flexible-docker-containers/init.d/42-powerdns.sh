@@ -145,6 +145,14 @@ if [ -n "$POSTGRES_DATABASE" ]; then
 		unset PGPASSWORD
 		sleep 1
 	done
+
+	# Check if the domain table exists, if not, create the database
+	if echo "\dt domains" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON  2>&1 | grep -q 'Did not find any relation named "domains"'; then
+		fdc_notice "Initializing PowerDNS PostgreSQL database"
+		export PGPASSWORD="$POSTGRES_PASSWORD"
+		psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON < /usr/share/doc/pdns/schema.pgsql.sql
+		unset PGPASSWORD
+	fi
 fi
 
 if [ -n "$MYSQL_DATABASE" ]; then
@@ -157,29 +165,26 @@ if [ -n "$MYSQL_DATABASE" ]; then
 		unset MYSQL_PWD
 		sleep 1
 	done
-fi
 
 
-if [ -n "$POWERDNS_INIT_POSTGRES" ]; then
-	fdc_notice "Initializing PowerDNS PostgreSQL database"
-	export PGPASSWORD="$POSTGRES_PASSWORD"
-	psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON < /usr/share/doc/pdns/schema.pgsql.sql
-	unset PGPASSWORD
-fi
+	# Check if the domain table exists, if not, create the database
+	if ! echo "SHOW CREATE TABLE domains;" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" > /dev/null 2>&1; then
+		fdc_notice "Initializing PowerDNS MySQL database"
+		export MYSQL_PWD="$MYSQL_PASSWORD"
 
-if [ -n "$POWERDNS_INIT_MYSQL" ]; then
-	fdc_notice "Initializing PowerDNS MySQL database"
-	export MYSQL_PWD="$MYSQL_PASSWORD"
-	mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" < /usr/share/doc/pdns/schema.mysql.sql
-	# We should add foreign keys as per https://doc.powerdns.com/authoritative/backends/generic-mysql.html
-	cat <<EOF | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE"
+
+		mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" < /usr/share/doc/pdns/schema.mysql.sql
+		# We should add foreign keys as per https://doc.powerdns.com/authoritative/backends/generic-mysql.html
+		cat <<EOF | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE"
 ALTER TABLE records ADD CONSTRAINT records_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE comments ADD CONSTRAINT comments_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE domainmetadata ADD CONSTRAINT domainmetadata_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE cryptokeys ADD CONSTRAINT cryptokeys_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 EOF
-	unset MYSQL_PWD
+		unset MYSQL_PWD
+	fi
 fi
+
 
 
 # Setup web access
