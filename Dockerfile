@@ -159,8 +159,6 @@ RUN set -eux; \
 COPY etc/supervisor/conf.d/powerdns.conf /etc/supervisor/conf.d/powerdns.conf
 COPY usr/local/share/flexible-docker-containers/init.d/42-powerdns.sh /usr/local/share/flexible-docker-containers/init.d
 COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/42-powerdns.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
-COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/43-powerdns-mysql.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
-COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/43-powerdns-postgres.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
 COPY usr/local/share/flexible-docker-containers/pre-init-tests.d/43-powerdns-zonefile.sh /usr/local/share/flexible-docker-containers/pre-init-tests.d
 COPY usr/local/share/flexible-docker-containers/tests.d/42-powerdns-mysql.sh /usr/local/share/flexible-docker-containers/tests.d
 COPY usr/local/share/flexible-docker-containers/tests.d/42-powerdns-postgres.sh /usr/local/share/flexible-docker-containers/tests.d
