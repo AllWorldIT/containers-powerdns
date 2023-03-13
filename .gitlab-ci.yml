@@ -4,19 +4,29 @@ include:
     file: '/default.yml'
 
 
+.docker_login_template: &docker_login
+  before_script:
+    # Group login incase we need to pull group images from a private registry
+    - |
+      if [ -n "$GROUP_CI_REGISTRY_USER" -a -n "$GROUP_CI_REGISTRY_PASSWORD" ]; then
+        echo "Group CI login to '${GROUP_CI_REGISTRY}'...";
+        echo "$GROUP_CI_REGISTRY_PASSWORD" | docker login --username "$GROUP_CI_REGISTRY_USER" --password-stdin "$GROUP_CI_REGISTRY";
+      fi
+    # Login to this repositories registry
+    - echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+
+
 test-database:
+  <<: *docker_login
   stage: test
   parallel:
     matrix:
-      - database: [ "mysql", "postgres" ]
-  needs:
-    - build
-    - test
+      - WITH_DATABASE: [ "mysql", "postgres" ]
   script:
     - docker pull "${PIPELINE_IMAGE}"
-    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-${database}"
-    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-${database}"
-    - sed -e "s,@@PIPELINE_IMAGE@@,${PIPELINE_IMAGE}," < docker-compose.yml.${database}.tmpl > docker-compose.yml
+    - cp -a tests "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-${WITH_DATABASE}"
+    - cd "tests-${CI_COMMIT_SHORT_SHA}-${CI_CONCURRENT_ID}-${WITH_DATABASE}"
+    - sed -e "s,@@PIPELINE_IMAGE@@,${PIPELINE_IMAGE}," < docker-compose.yml.${WITH_DATABASE}.tmpl > docker-compose.yml
     - ./run-cluster-test
   artifacts:
     paths:
