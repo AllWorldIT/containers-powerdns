@@ -118,6 +118,7 @@ RUN set -eux; \
 		mariadb-client \
 		mariadb-connector-c \
 		postgresql-client \
+		pwgen \
 		sqlite \
 		unixodbc \
 		yaml-cpp \
