@@ -87,7 +87,7 @@ Enable and allow access to the webui.
 
 Examples of configuration: 192.168.0.0/24,fec0::/64
 
-Port 8081 will be exposed.
+This option will enable the PowerDNS webserver and enable PowerDNS to listen on port 8081.
 
 
 ## POWERDNS_WEBSERVER_PASSWORD
@@ -97,9 +97,12 @@ If the password is not set, it is automatically generated and output to logs.
 This is used as the username and password to satisfy the authentication request.
 
 
-## API_KEY
+## POWERDNS_API_KEY
 
 If the API key is not set, it is automatically generated and output to logs.
+
+This option relies on the `POWERDNS_WEBSERVER_ALLOW_FROM` environment variable being set to enable the webserver which provides the
+API.
 
 
 ## POWERDNS_HEALTHECK_QUERY
