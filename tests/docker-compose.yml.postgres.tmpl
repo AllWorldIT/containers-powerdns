@@ -32,6 +32,7 @@ services:
       - POSTGRES_PASSWORD=powerdns
     networks:
       - internal
+      - external
 
   postgresql:
     image: registry.conarx.tech/containers/postgresql
@@ -42,8 +43,12 @@ services:
     networks:
       - internal
 
+
 networks:
   internal:
     driver: bridge
-
-# vim: filetype=yaml tabstop=2 shiftwidth=2 expandtab
+    enable_ipv6: true
+    internal: true
+  external:
+    driver: bridge
+    enable_ipv6: true

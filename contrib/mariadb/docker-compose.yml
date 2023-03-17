@@ -29,6 +29,8 @@ services:
       - MYSQL_USER=testuser
       - MYSQL_PASSWORD=testpass
       - MYSQL_DATABASE=testdb
+    networks:
+      - internal
 
   powerdns:
     image: registry.conarx.tech/containers/powerdns
@@ -45,3 +47,16 @@ services:
       - 8081:8081
       - 8053:8053/TCP
       - 8053:8053/UDP
+    networks:
+      - internal
+      - external
+
+
+networks:
+  internal:
+    driver: bridge
+    enable_ipv6: true
+    internal: true
+  external:
+    driver: bridge
+    enable_ipv6: true
