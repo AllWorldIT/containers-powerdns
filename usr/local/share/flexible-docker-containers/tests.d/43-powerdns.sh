@@ -30,7 +30,7 @@ fdc_test_pass powerdns "Correct DNS query reply from PowerDNS using IPv4"
 
 # Return if we don't have IPv6 support
 if [ -z "$(ip -6 route show default)" ]; then
-	touch /PASSED_POWERDNS
+	fdc_test_alert powerdns "Not running IPv6 tests due to no IPv6 default route"
 	return
 fi
 
@@ -41,7 +41,3 @@ if ! dig TXT powerdns.example.com @::1 | grep WORKING; then
 	false
 fi
 fdc_test_pass powerdns "Correct DNS query reply from PowerDNS using IPv6"
-
-
-touch /PASSED_POWERDNS
-
