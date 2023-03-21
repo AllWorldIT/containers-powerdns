@@ -136,42 +136,53 @@ fi
 
 
 if [ -n "$POSTGRES_DATABASE" ]; then
+	export PGPASSWORD="$POSTGRES_PASSWORD"
+
 	while true; do
 		fdc_notice "PowerDNS waiting for PostgreSQL server '$POSTGRES_HOST'..."
-		export PGPASSWORD="$POSTGRES_PASSWORD"
 		if pg_isready -d "$POSTGRES_DATABASE" -h "$POSTGRES_HOST" -U "$POSTGRES_USER"; then
 			break
 		fi
-		unset PGPASSWORD
 		sleep 1
 	done
 
 	# Check if the domain table exists, if not, create the database
 	if echo "\dt domains" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON  2>&1 | grep -q 'Did not find any relation named "domains"'; then
 		fdc_notice "Initializing PowerDNS PostgreSQL database"
-		export PGPASSWORD="$POSTGRES_PASSWORD"
 		psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON < /usr/share/doc/pdns/schema.pgsql.sql
-		unset PGPASSWORD
 	fi
+
+	unset PGPASSWORD
 fi
 
 if [ -n "$MYSQL_DATABASE" ]; then
+	export MYSQL_PWD="$MYSQL_PASSWORD"
+
 	while true; do
 		fdc_notice "PowerDNS waiting for MySQL server '$MYSQL_HOST'..."
-		export MYSQL_PWD="$MYSQL_PASSWORD"
 		if mysqladmin ping --host "$MYSQL_HOST" --user "$MYSQL_USER" --silent --connect-timeout=2; then
+			fdc_notice "MySQL server is UP, continuing"
 			break
 		fi
-		unset MYSQL_PWD
 		sleep 1
 	done
 
+	# Check if clustering is enabled
+	if echo "SHOW GLOBAL STATUS LIKE 'wsrep_connected';" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" -s | grep -q "ON"; then
+		fdc_notice "PowerDNS is running on a MySQL cluster, waiting for it to accept queries"
+		while true; do
+			fdc_notice "PowerDNS waiting for MySQL cluster to accept queries..."
+			if echo "SHOW GLOBAL STATUS LIKE 'wsrep_ready';" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" -s | grep -q "ON"; then
+				fdc_notice "MySQL cluster can accept queries, continuing"
+				break
+			fi
+			sleep 1
+		done
+	fi
 
 	# Check if the domain table exists, if not, create the database
 	if ! echo "SHOW CREATE TABLE domains;" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" > /dev/null 2>&1; then
 		fdc_notice "Initializing PowerDNS MySQL database"
-		export MYSQL_PWD="$MYSQL_PASSWORD"
-
 
 		mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" < /usr/share/doc/pdns/schema.mysql.sql
 		# We should add foreign keys as per https://doc.powerdns.com/authoritative/backends/generic-mysql.html
@@ -181,8 +192,9 @@ ALTER TABLE comments ADD CONSTRAINT comments_domain_id_ibfk FOREIGN KEY (domain_
 ALTER TABLE domainmetadata ADD CONSTRAINT domainmetadata_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE cryptokeys ADD CONSTRAINT cryptokeys_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 EOF
-		unset MYSQL_PWD
 	fi
+
+	unset MYSQL_PWD
 fi
 
 
