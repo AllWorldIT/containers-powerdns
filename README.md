@@ -105,6 +105,13 @@ This option relies on the `POWERDNS_WEBSERVER_ALLOW_FROM` environment variable b
 API.
 
 
+## POWERDNS_DEFAULT_SOA_CONTENT
+
+This should always be set, the PowerDNS Admin default is `a.misconfigured.dns.server.invalid hostmaster.@ 0 10800 3600 604800 3600`.
+
+When setting this value the first field should be the administrators email address with the `@` replaced with a `.`.
+
+
 ## POWERDNS_HEALTHECK_QUERY
 
 Query to use to check that PowerDNS is responsivle. Defaults to `id.server CHAOS TXT`.
@@ -163,9 +170,40 @@ User password to use when connecting to the database.
 
 # Configuration
 
+
 ## /etc/pdns/conf.d
 
 The PowerDNS configuration directory supports configuration files that are bind mounted in from the host system.
+
+
+## /etc/powerdns/conf.d/10-server-id.conf
+
+PowerDNS server ID configuration file.
+
+
+## /etc/powerdns/conf.d/40-defaults.conf
+
+PowerDNS server defaults configuration file.
+
+
+## /etc/powerdns/conf.d/42-soa-default.conf
+
+PowerDNS server configuration for SOA defaults.
+
+
+## /etc/powerdns/conf.d/50-backend.conf
+
+PowerDNS server backend configuration file.
+
+
+## /etc/powerdns/conf.d/52-webserver.conf
+
+PowerDNS server configuration file for webserver and API.
+
+
+## /etc/powerdns/conf.d/60-lua-records.conf
+
+PowerDNS server configuration for LUA records.
 
 
 
