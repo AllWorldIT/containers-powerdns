@@ -54,7 +54,7 @@ fi
 
 # Setup defaults
 if [ ! -f /etc/powerdns/conf.d/40-defaults.conf ]; then
-cat <<EOF > /etc/powerdns/conf.d/40-defaults.conf
+	cat <<EOF > /etc/powerdns/conf.d/40-defaults.conf
 max-tcp-connection-duration=5
 max-tcp-connections=1024
 max-tcp-connections-per-client=4
@@ -69,23 +69,33 @@ EOF
 fi
 
 
-# If we have no PostgreSQL setup, check if we can add it
-if [ ! -f /etc/powerdns/conf.d/50-backend-gpgsql.conf ] && [ -n "$POSTGRES_DATABASE" ]; then
-	# Check for a few things we need
-	if [ -z "$POSTGRES_HOST" ]; then
-		fdc_error "PowerDNS environment variable 'POSTGRES_HOST' is required"
-		false
-	fi
-	if [ -z "$POSTGRES_USER" ]; then
-		fdc_error "PowerDNS environment variable 'POSTGRES_USER' is required"
-		false
-	fi
-	if [ -z "$POSTGRES_PASSWORD" ]; then
-		fdc_error "PowerDNS environment variable 'POSTGRES_PASSWORD' is required"
-		false
-	fi
-	# Output config
-	cat <<EOF > /etc/powerdns/conf.d/50-backend-gpgsql.conf
+# Check if we have a default SOA content set
+if [ ! -f /etc/powerdns/conf.d/42-soa-default.conf ] && [ -n "$POWERDNS_DEFAULT_SOA_CONTENT" ]; then
+	echo -e "\ndefault-soa-content=$POWERDNS_DEFAULT_SOA_CONTENT" >> /etc/powerdns/conf.d/42-soa-default.conf
+fi
+
+
+# Check if we need to do backend config
+if [ ! -f /etc/powerdns/conf.d/50-backend.conf ]; then
+
+	# If we have no PostgreSQL setup, check if we can add it
+	if [ -n "$POSTGRES_DATABASE" ]; then
+		# Check for a few things we need
+		if [ -z "$POSTGRES_HOST" ]; then
+			fdc_error "PowerDNS environment variable 'POSTGRES_HOST' is required"
+			false
+		fi
+		if [ -z "$POSTGRES_USER" ]; then
+			fdc_error "PowerDNS environment variable 'POSTGRES_USER' is required"
+			false
+		fi
+		if [ -z "$POSTGRES_PASSWORD" ]; then
+			fdc_error "PowerDNS environment variable 'POSTGRES_PASSWORD' is required"
+			false
+		fi
+
+		# Output config
+		cat <<EOF > /etc/powerdns/conf.d/50-backend.conf
 launch += gpgsql
 gpgsql-dbname = $POSTGRES_DATABASE
 gpgsql-host = $POSTGRES_HOST
@@ -93,29 +103,27 @@ gpgsql-user = $POSTGRES_USER
 gpgsql-password = $POSTGRES_PASSWORD
 gpgsql-dnssec = yes
 EOF
-	# Setup perms
-	chown root:powerdns /etc/powerdns/conf.d/50-backend-gpgsql.conf
-	chmod 0640 /etc/powerdns/conf.d/50-backend-gpgsql.conf
-fi
+	fi
 
 
-# If we have no MySQL setup, check if we can add it
-if [ ! -f /etc/powerdns/conf.d/50-backend-gmysql.conf ] && [ -n "$MYSQL_DATABASE" ]; then
-	# Check for a few things we need
-	if [ -z "$MYSQL_HOST" ]; then
-		fdc_error "PowerDNS environment variable 'MYSQL_HOST' is required"
-		false
-	fi
-	if [ -z "$MYSQL_USER" ]; then
-		fdc_error "PowerDNS environment variable 'MYSQL_USER' is required"
-		false
-	fi
-	if [ -z "$MYSQL_PASSWORD" ]; then
-		fdc_error "PowerDNS environment variable 'MYSQL_PASSWORD' is required"
-		false
-	fi
-	# Output config
-		cat <<EOF > /etc/powerdns/conf.d/50-backend-gmysql.conf
+	# If we have no MySQL setup, check if we can add it
+	if [ -n "$MYSQL_DATABASE" ]; then
+		# Check for a few things we need
+		if [ -z "$MYSQL_HOST" ]; then
+			fdc_error "PowerDNS environment variable 'MYSQL_HOST' is required"
+			false
+		fi
+		if [ -z "$MYSQL_USER" ]; then
+			fdc_error "PowerDNS environment variable 'MYSQL_USER' is required"
+			false
+		fi
+		if [ -z "$MYSQL_PASSWORD" ]; then
+			fdc_error "PowerDNS environment variable 'MYSQL_PASSWORD' is required"
+			false
+		fi
+
+		# Output config
+		cat <<EOF > /etc/powerdns/conf.d/50-backend.conf
 launch += gmysql
 gmysql-dbname = $MYSQL_DATABASE
 gmysql-host = $MYSQL_HOST
@@ -123,14 +131,44 @@ gmysql-user = $MYSQL_USER
 gmysql-password = $MYSQL_PASSWORD
 gmysql-dnssec = yes
 EOF
-	# Setup perms
-	chown root:powerdns /etc/powerdns/conf.d/50-backend-gmysql.conf
-	chmod 0640 /etc/powerdns/conf.d/50-backend-gmysql.conf
+	fi
+fi
+
+# Setup perms
+if [ -e /etc/powerdns/conf.d/50-backend.conf ]; then
+	chown root:powerdns /etc/powerdns/conf.d/50-backend.conf
+	chmod 0640 /etc/powerdns/conf.d/50-backend.conf
+fi
+
+
+# Setup web access
+if [ ! -f /etc/powerdns/conf.d/52-webserver.conf ] && [ -n "$POWERDNS_WEBSERVER_ALLOW_FROM" ]; then
+	# Check if we got a password
+	if [ -z "$POWERDNS_WEBSERVER_PASSWORD" ]; then
+		POWERDNS_WEBSERVER_PASSWORD=$(pwgen 16 1)
+		fdc_notice "PowerDNS webserver password: $POWERDNS_WEBSERVER_PASSWORD"
+	fi
+	# Check if we got a API key
+	if [ -z "$POWERDNS_API_KEY" ]; then
+		POWERDNS_API_KEY=$(pwgen 16 1)
+		fdc_notice "PowerDNS webserver API key: $POWERDNS_API_KEY"
+	fi
+
+	cat <<EOF > /etc/powerdns/conf.d/50-webserver.conf
+webserver = yes
+webserver-address = 0.0.0.0
+webserver-allow-from = $POWERDNS_WEBSERVER_ALLOW_FROM
+webserver-loglevel = normal
+webserver-password = $POWERDNS_WEBSERVER_PASSWORD
+webserver-port=8081
+api = yes
+api-key = $POWERDNS_API_KEY
+EOF
 fi
 
 
 # Check if we're enabling LUA records
-if [ -n "$POWERDNS_ENABLE_LUA_RECORDS" ] && [ ! -f /etc/powerdns/conf.d/60-lua-records.conf ]; then
+if [ ! -f /etc/powerdns/conf.d/60-lua-records.conf ] && [ -n "$POWERDNS_ENABLE_LUA_RECORDS" ]; then
 	echo "enable-lua-records = yes" > /etc/powerdns/conf.d/60-lua-records.conf
 fi
 
@@ -195,33 +233,6 @@ EOF
 	fi
 
 	unset MYSQL_PWD
-fi
-
-
-
-# Setup web access
-if [ ! -f /etc/powerdns/conf.d/50-webserver.conf ] && [ -n "$POWERDNS_WEBSERVER_ALLOW_FROM" ]; then
-	# Check if we got a password
-	if [ -z "$POWERDNS_WEBSERVER_PASSWORD" ]; then
-		POWERDNS_WEBSERVER_PASSWORD=$(pwgen 16 1)
-		fdc_notice "PowerDNS webserver password: $POWERDNS_WEBSERVER_PASSWORD"
-	fi
-	# Check if we got a API key
-	if [ -z "$POWERDNS_API_KEY" ]; then
-		POWERDNS_API_KEY=$(pwgen 16 1)
-		fdc_notice "PowerDNS webserver API key: $POWERDNS_API_KEY"
-	fi
-
-	cat <<EOF > /etc/powerdns/conf.d/50-webserver.conf
-webserver = yes
-webserver-address = 0.0.0.0
-webserver-allow-from = $POWERDNS_WEBSERVER_ALLOW_FROM
-webserver-loglevel = normal
-webserver-password = $POWERDNS_WEBSERVER_PASSWORD
-webserver-port=8081
-api = yes
-api-key = $POWERDNS_API_KEY
-EOF
 fi
 
 
