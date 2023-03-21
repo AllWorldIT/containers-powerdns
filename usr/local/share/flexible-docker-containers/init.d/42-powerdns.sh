@@ -236,8 +236,12 @@ EOF
 fi
 
 
-# Set default healt check query
+# Set default health check query
 if [ -z "$POWERDNS_HEALTHECK_QUERY" ]; then
 	# shellcheck disable=SC2034
 	export POWERDNS_HEALTHCECK_QUERY="id.server CHAOS TXT"
 fi
+# Write out environment and fix perms of the config file
+set | grep -E '^POWERDNS_(HEALTHCHECK_QUERY)' > /etc/powerdns/powerdns.env || true
+chown root:powerdns /etc/powerdns/powerdns.env
+chmod 0640 /etc/powerdns/powerdns.env
