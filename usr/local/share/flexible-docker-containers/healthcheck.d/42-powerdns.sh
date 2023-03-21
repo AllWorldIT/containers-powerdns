@@ -20,6 +20,13 @@
 # IN THE SOFTWARE.
 
 
+# Import settings
+set -a
+# shellcheck disable=SC1091
+. /etc/powerdns/powerdns.env
+set +a
+
+
 # shellcheck disable=SC2086
 POWERDNS_TEST_RESULT_IPV4=$(dig $POWERDNS_HEALTHCECK_QUERY @127.0.0.1 2>&1)
 if ! grep "status: NOERROR" <<< "$POWERDNS_TEST_RESULT_IPV4"; then
@@ -33,7 +40,6 @@ fi
 
 # Return if we don't have IPv6 support
 if [ -z "$(ip -6 route show default)" ]; then
-	touch /PASSED_POWERDNS
 	return
 fi
 
