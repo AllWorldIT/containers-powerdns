@@ -28,7 +28,7 @@ set +a
 
 
 # shellcheck disable=SC2086
-POWERDNS_TEST_RESULT_IPV4=$(dig $POWERDNS_HEALTHCECK_QUERY @127.0.0.1 2>&1)
+POWERDNS_TEST_RESULT_IPV4=$(dig $POWERDNS_HEALTHCHECK_QUERY @127.0.0.1 2>&1)
 if ! grep "status: NOERROR" <<< "$POWERDNS_TEST_RESULT_IPV4"; then
 	fdc_error "Health check failed for PowerDNS using '$POWERDNS_HEALTHCHECK_QUERY' over IPv4:\n$POWERDNS_TEST_RESULT"
 	false
@@ -45,7 +45,7 @@ fi
 
 
 # shellcheck disable=SC2086
-POWERDNS_TEST_RESULT_IPV6=$(dig $POWERDNS_HEALTHCECK_QUERY @::1 2>&1)
+POWERDNS_TEST_RESULT_IPV6=$(dig $POWERDNS_HEALTHCHECK_QUERY @::1 2>&1)
 if ! grep "status: NOERROR" <<< "$POWERDNS_TEST_RESULT_IPV6"; then
 	fdc_error "Health check failed for PowerDNS using '$POWERDNS_HEALTHCHECK_QUERY' over IPv6:\n$POWERDNS_TEST_RESULT"
 	false
