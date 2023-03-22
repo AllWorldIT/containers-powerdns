@@ -239,9 +239,11 @@ fi
 # Set default health check query
 if [ -z "$POWERDNS_HEALTHECK_QUERY" ]; then
 	# shellcheck disable=SC2034
-	export POWERDNS_HEALTHCECK_QUERY="id.server CHAOS TXT"
+	POWERDNS_HEALTHCECK_QUERY="id.server CHAOS TXT"
 fi
 # Write out environment and fix perms of the config file
-set | grep -E '^POWERDNS_(HEALTHCHECK_QUERY)' > /etc/powerdns/powerdns.env || true
+set | grep -E '^POWERDNS_HEALTHCHECK_QUERY' > /etc/powerdns/powerdns.env
 chown root:powerdns /etc/powerdns/powerdns.env
 chmod 0640 /etc/powerdns/powerdns.env
+# NK: Unset so we force the env load in CI testing
+unset POWERDNS_HEALTHCECK_QUERY
