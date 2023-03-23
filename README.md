@@ -112,6 +112,11 @@ This should always be set, the PowerDNS Admin default is `a.misconfigured.dns.se
 When setting this value the first field should be the administrators email address with the `@` replaced with a `.`.
 
 
+## POWERDNS_EXPAND_ALIAS
+
+Enable expanding of aliases, this option must be set to a DNS resolver to use to do this. eg. '172.16.0.1'
+
+
 ## POWERDNS_HEALTHECK_QUERY
 
 Query to use to check that PowerDNS is responsivle. Defaults to `id.server CHAOS TXT`.
