@@ -173,6 +173,15 @@ if [ ! -f /etc/powerdns/conf.d/60-lua-records.conf ] && [ -n "$POWERDNS_ENABLE_L
 fi
 
 
+# Check if we're expanding ALIAS records
+if [ ! -f /etc/powerdns/conf.d/60-expand-alias.conf ] && [ -n "$POWERDNS_EXPAND_ALIAS" ]; then
+	cat <<EOF > /etc/powerdns/conf.d/60-expand-alias.conf
+resolver = $POWERDNS_EXPAND_ALIAS
+expand-alias = yes
+EOF
+fi
+
+
 if [ -n "$POSTGRES_DATABASE" ]; then
 	export PGPASSWORD="$POSTGRES_PASSWORD"
 
