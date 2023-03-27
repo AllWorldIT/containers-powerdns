@@ -22,8 +22,17 @@
 
 fdc_notice "Setting up PowerDNS test environment"
 
+apk add curl
+
 # shellcheck disable=SC2034
 POWERDNS_SERVER_ID=test.example.net
+
+# shellcheck disable=SC2034
+POWERDNS_WEBSERVER_ALLOW_FROM=::ffff:127.0.0.1,::1
+# shellcheck disable=SC2034
+POWERDNS_WEBSERVER_PASSWORD=cipassword
+# shellcheck disable=SC2034
+POWERDNS_API_KEY=ciapikey
 
 # Enable some debugging options
 cat <<EOF > /etc/powerdns/conf.d/99-ci-testing.conf
