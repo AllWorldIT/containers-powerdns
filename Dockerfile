@@ -57,6 +57,7 @@ RUN set -eux; \
 		--enable-unit-tests \
 		--with-service-user=powerdns \
 		--with-service-group=powerdns \
+		--enable-remotebackend-http \
 		--enable-remotebackend-zeromq; \
 	make V=1 -j$(nproc) -l8; \
 	\

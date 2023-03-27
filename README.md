@@ -173,6 +173,15 @@ User password to use when connecting to the database.
 
 
 
+# Remote Backend Environment Variables
+
+
+## POWERDNS_REMOTE_CONNECTION_STRING
+
+Set up a remote backend connection. See https://doc.powerdns.com/authoritative/backends/remote.html for more information.
+
+
+
 # Configuration
 
 

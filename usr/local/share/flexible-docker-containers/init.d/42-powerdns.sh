@@ -78,7 +78,7 @@ fi
 # Check if we need to do backend config
 if [ ! -f /etc/powerdns/conf.d/50-backend.conf ]; then
 
-	# If we have no PostgreSQL setup, check if we can add it
+	# If we have a PostgreSQL database, check if we can configure it
 	if [ -n "$POSTGRES_DATABASE" ]; then
 		# Check for a few things we need
 		if [ -z "$POSTGRES_HOST" ]; then
@@ -96,17 +96,16 @@ if [ ! -f /etc/powerdns/conf.d/50-backend.conf ]; then
 
 		# Output config
 		cat <<EOF > /etc/powerdns/conf.d/50-backend.conf
-launch += gpgsql
-gpgsql-dbname = $POSTGRES_DATABASE
-gpgsql-host = $POSTGRES_HOST
-gpgsql-user = $POSTGRES_USER
-gpgsql-password = $POSTGRES_PASSWORD
-gpgsql-dnssec = yes
+launch+=gpgsql
+gpgsql-dbname=$POSTGRES_DATABASE
+gpgsql-host=$POSTGRES_HOST
+gpgsql-user=$POSTGRES_USER
+gpgsql-password=$POSTGRES_PASSWORD
+gpgsql-dnssec=yes
 EOF
 	fi
 
-
-	# If we have no MySQL setup, check if we can add it
+	# If we have a MySQL database, check if we can configure it
 	if [ -n "$MYSQL_DATABASE" ]; then
 		# Check for a few things we need
 		if [ -z "$MYSQL_HOST" ]; then
@@ -124,12 +123,20 @@ EOF
 
 		# Output config
 		cat <<EOF > /etc/powerdns/conf.d/50-backend.conf
-launch += gmysql
-gmysql-dbname = $MYSQL_DATABASE
-gmysql-host = $MYSQL_HOST
-gmysql-user = $MYSQL_USER
-gmysql-password = $MYSQL_PASSWORD
-gmysql-dnssec = yes
+launch+=gmysql
+gmysql-dbname=$MYSQL_DATABASE
+gmysql-host=$MYSQL_HOST
+gmysql-user=$MYSQL_USER
+gmysql-password=$MYSQL_PASSWORD
+gmysql-dnssec=yes
+EOF
+	fi
+
+	# If we have a remote connection, check if we can configure it
+	if [ -n "$POWERDNS_REMOTE_CONNECTION_STRING" ]; then
+		# Output config
+		cat <<EOF > /etc/powerdns/conf.d/50-backend.conf
+remote-connection-string=$POWERDNS_REMOTE_CONNECTION_STRING
 EOF
 	fi
 fi
@@ -155,14 +162,14 @@ if [ ! -f /etc/powerdns/conf.d/52-webserver.conf ] && [ -n "$POWERDNS_WEBSERVER_
 	fi
 
 	cat <<EOF > /etc/powerdns/conf.d/50-webserver.conf
-webserver = yes
-webserver-address = 0.0.0.0
-webserver-allow-from = $POWERDNS_WEBSERVER_ALLOW_FROM
-webserver-loglevel = normal
-webserver-password = $POWERDNS_WEBSERVER_PASSWORD
+webserver=yes
+webserver-address=::
+webserver-allow-from=$POWERDNS_WEBSERVER_ALLOW_FROM
+webserver-loglevel=normal
+webserver-password=$POWERDNS_WEBSERVER_PASSWORD
 webserver-port=8081
-api = yes
-api-key = $POWERDNS_API_KEY
+api=yes
+api-key=$POWERDNS_API_KEY
 EOF
 fi
 
@@ -181,6 +188,10 @@ expand-alias = yes
 EOF
 fi
 
+
+#
+# Database initialization
+#
 
 if [ -n "$POSTGRES_DATABASE" ]; then
 	export PGPASSWORD="$POSTGRES_PASSWORD"
@@ -244,6 +255,10 @@ EOF
 	unset MYSQL_PWD
 fi
 
+
+#
+# Health check setup
+#
 
 # Set default health check query
 if [ -z "$POWERDNS_HEALTHCHECK_QUERY" ]; then
