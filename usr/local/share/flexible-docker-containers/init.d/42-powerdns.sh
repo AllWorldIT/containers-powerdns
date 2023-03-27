@@ -132,6 +132,14 @@ gmysql-password = $MYSQL_PASSWORD
 gmysql-dnssec = yes
 EOF
 	fi
+
+	# If we have a remote connection, check if we can configure it
+	if [ -n "$POWERDNS_REMOTE_CONNECTION_STRING" ]; then
+		# Output config
+		cat <<EOF > /etc/powerdns/conf.d/50-backend.conf
+remote-connection-string=$POWERDNS_REMOTE_CONNECTION_STRING
+EOF
+	fi
 fi
 
 # Setup perms
