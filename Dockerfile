@@ -6,7 +6,7 @@
 FROM registry.conarx.tech/containers/alpine/edge as builder
 
 
-ENV POWERDNS_VER=4.8.4
+ENV POWERDNS_VER=4.9.0
 
 
 # Install libs we need
