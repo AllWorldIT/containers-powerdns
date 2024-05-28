@@ -6,7 +6,7 @@
 FROM registry.conarx.tech/containers/alpine/edge as builder
 
 
-ENV POWERDNS_VER=4.9.0
+ENV POWERDNS_VER=4.9.1
 
 
 # Install libs we need
@@ -35,6 +35,8 @@ RUN set -eux; \
 RUN set -eux; \
 	cd build; \
 	cd "pdns-${POWERDNS_VER}"; \
+	# Compiler flags
+	. /etc/buildflags; \
 	\
 	./configure \
 		--prefix=/usr \
