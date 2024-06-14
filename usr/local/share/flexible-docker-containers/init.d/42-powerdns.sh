@@ -218,7 +218,7 @@ if [ -n "$MYSQL_DATABASE" ]; then
 
 	while true; do
 		fdc_notice "PowerDNS waiting for MySQL server '$MYSQL_HOST'..."
-		if mysqladmin ping --host "$MYSQL_HOST" --user "$MYSQL_USER" --silent --connect-timeout=2; then
+		if mariadb-admin ping --host "$MYSQL_HOST" --user "$MYSQL_USER" --skip-ssl --silent --connect-timeout=2; then
 			fdc_notice "MySQL server is UP, continuing"
 			break
 		fi
@@ -226,11 +226,11 @@ if [ -n "$MYSQL_DATABASE" ]; then
 	done
 
 	# Check if clustering is enabled
-	if echo "SHOW GLOBAL STATUS LIKE 'wsrep_connected';" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" -s | grep -q "ON"; then
+	if echo "SHOW GLOBAL STATUS LIKE 'wsrep_connected';" | mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE" | grep -q "ON"; then
 		fdc_notice "PowerDNS is running on a MySQL cluster, waiting for it to accept queries"
 		while true; do
 			fdc_notice "PowerDNS waiting for MySQL cluster to accept queries..."
-			if echo "SHOW GLOBAL STATUS LIKE 'wsrep_ready';" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" -s | grep -q "ON"; then
+			if echo "SHOW GLOBAL STATUS LIKE 'wsrep_ready';" | mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE" | grep -q "ON"; then
 				fdc_notice "MySQL cluster can accept queries, continuing"
 				break
 			fi
@@ -239,12 +239,12 @@ if [ -n "$MYSQL_DATABASE" ]; then
 	fi
 
 	# Check if the domain table exists, if not, create the database
-	if ! echo "SHOW CREATE TABLE domains;" | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" > /dev/null 2>&1; then
+	if ! echo "SHOW CREATE TABLE domains;" | mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE" > /dev/null 2>&1; then
 		fdc_notice "Initializing PowerDNS MySQL database"
 
-		mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE" < /usr/share/doc/pdns/schema.mysql.sql
+		mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE" < /usr/share/doc/pdns/schema.mysql.sql
 		# We should add foreign keys as per https://doc.powerdns.com/authoritative/backends/generic-mysql.html
-		cat <<EOF | mysql -h "$MYSQL_HOST" -u "$MYSQL_USER" "$MYSQL_DATABASE"
+		cat <<EOF | mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE"
 ALTER TABLE records ADD CONSTRAINT records_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE comments ADD CONSTRAINT comments_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE domainmetadata ADD CONSTRAINT domainmetadata_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
