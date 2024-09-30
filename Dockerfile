@@ -6,7 +6,7 @@
 FROM registry.conarx.tech/containers/alpine/3.20 as builder
 
 
-ENV POWERDNS_VER=4.9.1
+ENV POWERDNS_VER=4.9.2
 
 
 # Install libs we need
