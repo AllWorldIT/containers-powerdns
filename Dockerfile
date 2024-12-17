@@ -6,13 +6,12 @@
 FROM registry.conarx.tech/containers/alpine/edge as builder
 
 
-ENV POWERDNS_VER=4.9.2
+ENV POWERDNS_VER=4.9.3
 
 
 # Install libs we need
 RUN set -eux; \
 	true "Installing build dependencies"; \
-# from https://git.alpinelinux.org/aports/tree/main/pdns/APKBUILD
 	apk add --no-cache \
 		build-base \
 		\
