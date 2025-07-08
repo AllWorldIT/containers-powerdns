@@ -205,7 +205,8 @@ if [ -n "$POSTGRES_DATABASE" ]; then
 	done
 
 	# Check if the domain table exists, if not, create the database
-	if echo "\dt domains" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON  2>&1 | grep -q 'Did not find any relation named "domains"'; then
+	if echo "\dt domains" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON  2>&1 \
+			| grep -q -e 'Did not find any relation named "domains"' -e 'No matching relations found'; then
 		fdc_notice "Initializing PowerDNS PostgreSQL database"
 		psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON < /usr/share/doc/pdns/schema.pgsql.sql
 	fi

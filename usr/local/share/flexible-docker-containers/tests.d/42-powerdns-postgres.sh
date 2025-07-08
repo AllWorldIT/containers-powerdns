@@ -28,19 +28,19 @@ fi
 
 fdc_test_start powerdns "Creating PowerDNS PostgreSQL test data using pdnsutil..."
 if ! pdnsutil create-zone example.com ns.example.com; then
-	fdc_test_failed powerdns "Failed to create PowerDNS PostgreSQL zone"
+	fdc_test_fail powerdns "Failed to create PowerDNS PostgreSQL zone"
 	false
 fi
 if ! pdnsutil add-record example.com powerdns TXT WORKING; then
-	fdc_test_failed powerdns "Failed to add record to PowerDNS PostgreSQL zone"
+	fdc_test_fail powerdns "Failed to add record to PowerDNS PostgreSQL zone"
 	false
 fi
 if ! pdnsutil check-zone example.com; then
-	fdc_test_failed powerdns "Failed to checking PowerDNS PostgreSQL zone"
+	fdc_test_fail powerdns "Failed to checking PowerDNS PostgreSQL zone"
 	false
 fi
 if ! pdns_control rediscover; then
-	fdc_test_failed powerdns "Failed rediscover for PowerDNS PostgreSQL zone"
+	fdc_test_fail powerdns "Failed rediscover for PowerDNS PostgreSQL zone"
 	false
 fi
 fdc_test_pass powerdns "PowerDNS PostgreSQL test data created"
