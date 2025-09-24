@@ -31,7 +31,7 @@ if ! pdnsutil create-zone example.com ns.example.com; then
 	fdc_test_fail powerdns "Failed to create PowerDNS MySQL zone"
 	false
 fi
-if ! pdnsutil add-record example.com powerdns TXT WORKING; then
+if ! pdnsutil add-record example.com powerdns.example.com. TXT WORKING; then
 	fdc_test_fail powerdns "Failed to add record to PowerDNS MySQL zone"
 	false
 fi
