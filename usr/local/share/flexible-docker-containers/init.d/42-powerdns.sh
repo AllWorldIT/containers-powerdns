@@ -205,10 +205,17 @@ if [ -n "$POSTGRES_DATABASE" ]; then
 	done
 
 	# Check if the domain table exists, if not, create the database
-	if echo "\dt domains" | psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON  2>&1 \
-			| grep -q -e 'Did not find any relation named "domains"' -e 'No matching relations found'; then
+	fdc_notice "Checking if PowerDNS PostgreSQL database schema exists"
+	if ! psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON -t -A \
+			-c "SELECT 1 FROM pg_tables WHERE tablename = 'domains' AND schemaname = current_schema()" 2>/dev/null | grep -q 1; then
 		fdc_notice "Initializing PowerDNS PostgreSQL database"
+		if [ ! -f /usr/share/doc/pdns/schema.pgsql.sql ]; then
+			fdc_error "PowerDNS PostgreSQL schema file not found: /usr/share/doc/pdns/schema.pgsql.sql"
+			false
+		fi
 		psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -w "$POSTGRES_DATABASE" -v ON_ERROR_STOP=ON < /usr/share/doc/pdns/schema.pgsql.sql
+	else
+		fdc_notice "PowerDNS PostgreSQL database schema already exists"
 	fi
 
 	unset PGPASSWORD
@@ -240,8 +247,13 @@ if [ -n "$MYSQL_DATABASE" ]; then
 	fi
 
 	# Check if the domain table exists, if not, create the database
+	fdc_notice "Checking if PowerDNS MySQL database schema exists"
 	if ! echo "SHOW CREATE TABLE domains;" | mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE" > /dev/null 2>&1; then
 		fdc_notice "Initializing PowerDNS MySQL database"
+		if [ ! -f /usr/share/doc/pdns/schema.mysql.sql ]; then
+			fdc_error "PowerDNS MySQL schema file not found: /usr/share/doc/pdns/schema.mysql.sql"
+			false
+		fi
 
 		mariadb --silent --skip-ssl --host "$MYSQL_HOST" --user "$MYSQL_USER" "$MYSQL_DATABASE" < /usr/share/doc/pdns/schema.mysql.sql
 		# We should add foreign keys as per https://doc.powerdns.com/authoritative/backends/generic-mysql.html
@@ -251,6 +263,8 @@ ALTER TABLE comments ADD CONSTRAINT comments_domain_id_ibfk FOREIGN KEY (domain_
 ALTER TABLE domainmetadata ADD CONSTRAINT domainmetadata_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE cryptokeys ADD CONSTRAINT cryptokeys_domain_id_ibfk FOREIGN KEY (domain_id) REFERENCES domains (id) ON DELETE CASCADE ON UPDATE CASCADE;
 EOF
+	else
+		fdc_notice "PowerDNS MySQL database schema already exists"
 	fi
 
 	unset MYSQL_PWD
